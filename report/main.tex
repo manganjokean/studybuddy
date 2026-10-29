@@ -104,9 +104,10 @@ StudyBuddy is a publicly deployed web application that helps students turn their
 notes into interactive study material. The project implements an \emph{AI agent} rather than a
 plain chatbot: a Node.js/Express back end exposes a set of tools to the Google Gemini model, and
 an agentic loop lets the model decide which tool to call, execute it on the server, feed the
-result back, and only then produce a final answer for the user. The client side is written in
-vanilla HTML, CSS and JavaScript and renders the agent's reasoning trace live, together with an
-interactive multiple-choice quiz, flip-card flashcards and structured concept explanations.
+result back, and only then produce a final answer for the user. The client side is a chat
+interface written in vanilla HTML, CSS and JavaScript: user and agent turns appear as bubbles, the
+agent's tool calls are animated as a visible plan, and the quiz, flashcards or explanation built
+by a tool are rendered inline in the same conversation.
 Quiz results are persisted in the browser with \texttt{localStorage}. The application is deployed
 on Render and the Gemini API key is kept entirely outside the repository through environment
 variables, a strict \texttt{.gitignore} and an automated pre-push secret scanner.
@@ -311,23 +312,28 @@ The graded focus of the course is client-side development, so the front end is w
 any framework.
 
 \begin{itemize}[leftmargin=*]
+  \item \textbf{Conversation thread}: user and agent turns are rendered as chat bubbles with a
+        typing indicator while the agent works, and the thread auto-scrolls to the newest message.
   \item \textbf{Agent trace animation}: each tool call returned by the API is appended to an
-        ordered list with a staggered delay, so the audience can watch the agent ``think''.
-  \item \textbf{Tabbed artefact views}: quiz, flashcards and explanation appear as tabs; only the
-        tabs for tools that actually ran are shown.
+        ``Agent plan'' block one step at a time, so the audience can watch the agent decide and act
+        before the answer arrives.
+  \item \textbf{Inline artefact cards}: the quiz, flashcard deck or explanation produced by a tool
+        is injected directly into the same conversation turn -- no page change, no separate results
+        screen.
   \item \textbf{Quiz engine}: one question at a time, immediate green/red feedback together with
         the explanation, a progress pill, and a conic-gradient score ring at the end.
   \item \textbf{Flashcards}: a 3D \texttt{rotateY} flip implemented with
         \texttt{transform-style: preserve-3d} and \texttt{backface-visibility}, plus a Fisher--Yates
         shuffle.
   \item \textbf{State \& persistence}: scores are written to \texttt{localStorage} under
-        \texttt{studybuddy.scores}; the last eight conversation turns are kept as context for the
-        agent.
-  \item \textbf{Resilience}: loading spinner on the button, toast notifications for errors,
-        \texttt{Ctrl/Cmd+Enter} shortcut, and all dynamic text inserted through an HTML-escaping
-        helper to avoid injection from model output.
-  \item \textbf{Responsive layout}: a two-column grid that collapses to a single column below
-        900\,px.
+        \texttt{studybuddy.scores}; the last eight conversation turns are sent with every request
+        so the agent can answer follow-ups in context.
+  \item \textbf{Composer}: \emph{Enter} sends, \emph{Shift+Enter} inserts a newline, the textarea
+        grows with its content, and mode/level/item selectors steer the agent's tool choice.
+  \item \textbf{Resilience}: spinner on the send button, toast notifications for errors, and all
+        dynamic text inserted through an HTML-escaping helper to avoid injection from model output.
+  \item \textbf{Responsive layout}: a single-column chat shell that adapts below 780\,px, with
+        touch-friendly card grids.
 \end{itemize}
 
 % ---- screenshots (export PNGs to report/figures/) ----
@@ -339,14 +345,20 @@ any framework.
       \textbf{[ screenshot pending]}\\[2pt]\texttt{figures/#1.png}}}}}}
 
 \begin{figure}[h]
+  \centering \figslot{app-welcome}
+  \caption{Landing screen: capability overview, example prompts and the composer.}
+  \label{fig:welcome}
+\end{figure}
+
+\begin{figure}[h]
 \centering
 \begin{minipage}{0.48\textwidth}
   \centering \figslot{app-main}
-  \caption{Main screen with input panel and agent plan.}
+  \caption{Chat turn: user request, agent plan and reply.}
 \end{minipage}\hfill
 \begin{minipage}{0.48\textwidth}
   \centering \figslot{app-quiz}
-  \caption{Interactive quiz with per-question feedback.}
+  \caption{Inline quiz with per-question feedback.}
 \end{minipage}
 \end{figure}
 
@@ -484,7 +496,7 @@ streaming responses so the plan trace appears in real time.
 \begin{itemize}[leftmargin=*]
   \item Live application: \url{\appurl}
   \item Source repository: \url{\repourl}
-  \item This report (PDF): \href{\repourl/blob/main/report/StudyBuddy-Report.pdf}{\texttt{report/StudyBuddy-Report.pdf}}
+  \item This report (PDF): \href{\repourl/blob/main/report/main.pdf}{\texttt{report/main.pdf}}
 \end{itemize}
 
 \begin{thebibliography}{9}

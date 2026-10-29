@@ -3,7 +3,7 @@
 > An AI agent that turns your notes into quizzes, flashcards and clear explanations.
 
 **Live app:** _deployed on Render — see below_
-**Report (PDF):** [report/StudyBuddy-Report.pdf](report/StudyBuddy-Report.pdf)
+**Report (PDF):** [report/main.pdf](report/main.pdf)
 
 ---
 
@@ -26,8 +26,9 @@ the model until a final answer is produced.
 
 ### Features
 
+- 💬 **Chat interface** — message thread with typing indicator and follow-up context
 - 🧠 Agent plan trace — watch the agent choose and call its tools live
-- 📝 Interactive quiz with instant feedback and scoring
+- 📝 Interactive quiz with instant feedback and scoring (rendered inline in the chat)
 - 🃏 Flip-card flashcards with shuffle
 - 💡 Structured explanations
 - 📊 Quiz history saved in `localStorage`
@@ -66,11 +67,12 @@ npm start                 # http://localhost:3000
 ├── server.js            Express server + /api/agent endpoint
 ├── agent.js             Agent loop, tool schemas and tool implementations
 ├── scripts/keycheck.js  Pre-push secret scanner
+├── scripts/shoot.mjs    Headless UI test + report screenshots (Playwright)
 ├── public/
-│   ├── index.html       Application markup
-│   ├── styles.css       Styling, quiz UI, flip cards, responsive layout
+│   ├── index.html       Chat layout: thread, composer, artefact cards
+│   ├── styles.css       Theming, bubbles, quiz UI, 3D flip cards, responsive
 │   └── app.js           Client logic: fetch, trace animation, quiz, storage
-├── report/              LaTeX report + compiled PDF
+├── report/              LaTeX report, compiled PDF and figures/
 └── .env.example         Placeholder environment variables
 ```
 
