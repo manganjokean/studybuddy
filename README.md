@@ -2,7 +2,7 @@
 
 > An AI agent that turns your notes into quizzes, flashcards and clear explanations.
 
-**Live app:** _deployed on Render — see below_
+**Live app:** _deployed on Vercel — see below_
 **Report (PDF):** [report/main.pdf](report/main.pdf)
 
 ---
@@ -39,7 +39,7 @@ the model until a final answer is produced.
 - **Front end:** HTML5, CSS3 (custom properties, 3D transforms), vanilla ES6 JavaScript
 - **Back end:** Node.js, Express
 - **AI:** Google Gemini API (`gemini-3.8-flash`) via REST — function calling for tool use
-- **Deployment:** Render
+- **Deployment:** Vercel (static site + serverless functions)
 - **Report:** LaTeX (compiled to PDF)
 
 ## Run locally
@@ -56,7 +56,7 @@ npm start                 # http://localhost:3000
 
 1. `.env` is listed in `.gitignore` from the very first commit.
 2. The server reads it with `process.env.GEMINI_API_KEY` — it is never sent to the browser.
-3. On Render, the key is pasted into **Dashboard → Environment** only.
+3. On Vercel, the key is pasted into **Settings → Environment Variables** only.
 4. Before every push: `npm run keycheck` scans all source files for leaked credentials.
 
 `.env.example` is committed with placeholder values only.
@@ -64,8 +64,12 @@ npm start                 # http://localhost:3000
 ## Project structure
 
 ```
-├── server.js            Express server + /api/agent endpoint
+├── server.js            Express server for local dev (mounts ./api)
 ├── agent.js             Agent loop, tool schemas and tool implementations
+├── api/
+│   ├── agent.js         POST /api/agent — Vercel function + Express route
+│   └── health.js        GET /api/health — Vercel function + Express route
+├── vercel.json          Vercel config: static output, 30s function limit
 ├── scripts/keycheck.js  Pre-push secret scanner
 ├── scripts/shoot.mjs    Headless UI test + report screenshots (Playwright)
 ├── public/
@@ -75,6 +79,18 @@ npm start                 # http://localhost:3000
 ├── report/              LaTeX report, compiled PDF and figures/
 └── .env.example         Placeholder environment variables
 ```
+
+## Deploy (Vercel)
+
+The two handlers in `api/` are the **same modules** the local Express server mounts, so
+local dev and production run identical code.
+
+1. Push the repository to GitHub.
+2. On [vercel.com](https://vercel.com): **Add New → Project** → import the repo
+   (framework preset **Other** — `vercel.json` already declares `public/` as the static output).
+3. **Settings → Environment Variables** → add `GEMINI_API_KEY` (secret value, never in git).
+4. **Deploy** → the site is live at `https://studybuddy-XXXX.vercel.app`.
+5. Locally, `npm start` runs the same handlers through Express.
 
 ## Author
 

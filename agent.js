@@ -21,6 +21,9 @@ const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MAX_STEPS = 4;
 
+// True only when a real key is present (rejects the .env.example placeholder).
+const KEY_PRESENT = Boolean(API_KEY && API_KEY.length > 20 && !/^your_/i.test(API_KEY));
+
 /* ------------------------------------------------------------------ *
  * System prompt - defines the agent's persona and tool policy
  * ------------------------------------------------------------------ */
@@ -123,7 +126,7 @@ const TOOLS = [
  * ------------------------------------------------------------------ */
 
 async function callGemini({ contents, tools, systemInstruction, generationConfig }) {
-  if (!API_KEY) {
+  if (!KEY_PRESENT) {
     const err = new Error(
       'GEMINI_API_KEY is not configured on the server. Add it to your environment variables.'
     );
@@ -517,4 +520,4 @@ function fallbackMessage(results, trace) {
   return 'I could not complete that request - please try again.';
 }
 
-module.exports = { runAgent, MODEL };
+module.exports = { runAgent, MODEL, KEY_PRESENT };

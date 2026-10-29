@@ -30,7 +30,7 @@
 \newcommand{\studentid}{STUDENT ID}
 \newcommand{\coursename}{Web Client-Side Programming}
 \newcommand{\instructorname}{INSTRUCTOR NAME}
-\newcommand{\appurl}{https://studybuddy-XXXX.onrender.com}
+\newcommand{\appurl}{https://studybuddy-XXXX.vercel.app}
 \newcommand{\repourl}{https://github.com/manganjokean/studybuddy}
 
 \hypersetup{
@@ -109,7 +109,7 @@ interface written in vanilla HTML, CSS and JavaScript: user and agent turns appe
 agent's tool calls are animated as a visible plan, and the quiz, flashcards or explanation built
 by a tool are rendered inline in the same conversation.
 Quiz results are persisted in the browser with \texttt{localStorage}. The application is deployed
-on Render and the Gemini API key is kept entirely outside the repository through environment
+on Vercel and the Gemini API key is kept entirely outside the repository through environment
 variables, a strict \texttt{.gitignore} and an automated pre-push secret scanner.
 This report describes the requirements, architecture, agent design, implementation,
 deployment, security measures, testing, and lessons learned during the project.
@@ -161,7 +161,7 @@ FR-5 & Flashcard deck with flip interaction & Implemented \\
 FR-6 & Structured concept explanation & Implemented \\
 FR-7 & Persist quiz history locally in the browser & Implemented (\texttt{localStorage}) \\
 FR-8 & Graceful error handling for invalid input, rate limits and API failures & Implemented \\
-NFR-1 & Deployed to a public URL & Render \\
+NFR-1 & Deployed to a public URL & Vercel \\
 NFR-2 & No API key in the repository or in client-side code & Enforced by tooling \\
 NFR-3 & Responsive layout, no front-end framework & Vanilla HTML/CSS/JS \\
 \bottomrule
@@ -182,7 +182,7 @@ Front end   & HTML5, CSS3, vanilla ES6 JS & Course focus: client-side programmin
 Back end    & Node.js 22+ / Express 5     & Simple static + JSON API server \\
 AI model    & Google Gemini (\texttt{gemini-3.8-flash}) & Native function calling, free tier \\
 API style   & REST (\texttt{generateContent}) & No SDK dependency, transparent requests \\
-Hosting     & Render                       & Free tier, Node runtime, environment variables \\
+Hosting     & Vercel                       & Static files + Node serverless functions, free tier \\
 Versioning  & Git / GitHub                 & Required repository link \\
 Report      & \LaTeX~on~Overleaf & PDF output (required deliverable) \\
 \bottomrule
@@ -193,8 +193,8 @@ Report      & \LaTeX~on~Overleaf & PDF output (required deliverable) \\
 \section{System Architecture}
 
 The application is a classic two-tier structure. The browser never talks to the AI provider:
-all model calls go through the Express back end, which is the only component that holds the API
-key.
+all model calls go through the back end -- an Express server during local development, a Vercel
+serverless function in production -- which is the only component that holds the API key.
 
 \begin{figure}[h]
 \centering
@@ -205,12 +205,12 @@ key.
   arr/.style={-{Stealth[length=3mm]}, thick, darkgrey}
 ]
   \node[box] (browser) {\textbf{Browser}\\ \texttt{public/}\\ index.html \\ styles.css \\ app.js};
-  \node[box, right=of browser] (server) {\textbf{Express}\\ \texttt{server.js}\\ \texttt{/api/agent}};
+  \node[box, right=of browser] (server) {\textbf{API handler}\\ \texttt{api/agent.js}\\ \texttt{(shared with Express)}};
   \node[box, right=of server] (agent) {\textbf{Agent loop}\\ \texttt{agent.js}\\ tools + schema};
   \node[box, right=of agent] (gemini) {\textbf{Gemini API}\\ \texttt{gemini-3.8-flash}};
 
   \node[host, fit=(browser)] (bhost) {};
-  \node[host, fit={(server)(agent)}, label={[font=\small]below:Render dyno (Node.js)}] (shost) {};
+  \node[host, fit={(server)(agent)}, label={[font=\small]below:Vercel serverless function (Node.js)}] (shost) {};
   \node[host, fit=(gemini)] (ghost) {};
   \node[font=\small, above=0.15cm of bhost] {client};
   \node[font=\small, above=0.15cm of ghost] {third party};
@@ -219,18 +219,24 @@ key.
   \draw[arr] (server) -- node[above,font=\small]{tool loop} (agent);
   \draw[arr] (agent) -- node[above,font=\small]{\texttt{x-goog-api-key}} (gemini);
 \end{tikzpicture}
-\caption{Request flow. The API key exists only inside the Render environment.}
+\caption{Request flow. The API key exists only inside the Vercel environment (or the developer's
+local \texttt{.env}).}
 \label{fig:arch}
 \end{figure}
 
 \subsection*{Project structure}
 \begin{lstlisting}[language=bash]
 studybuddy/
-|-- server.js            # Express server, static hosting, /api/agent
+|-- server.js            # Express server for local dev, mounts ./api
 |-- agent.js             # agent loop, tool schemas, tool implementations
+|-- api/
+|   |-- agent.js         # POST /api/agent   (Vercel function + Express route)
+|   `-- health.js        # GET  /api/health  (Vercel function + Express route)
+|-- vercel.json          # Vercel config: static output public/, 30s limit
 |-- scripts/keycheck.js  # pre-push secret scanner
+|-- scripts/shoot.mjs    # headless UI test + report screenshots
 |-- public/
-|   |-- index.html       # markup: input, trace, tabs, quiz, cards
+|   |-- index.html       # markup: chat thread, composer, artefact cards
 |   |-- styles.css       # theming, quiz UI, 3D flip cards, responsive
 |   `-- app.js           # fetch, trace animation, quiz logic, storage
 |-- report/              # this LaTeX report + figures
@@ -377,22 +383,29 @@ any framework.
 % =====================================================================
 \section{Deployment}
 
-The application is deployed on \textbf{Render} as a Node web service. Heroku, also listed in the
-brief, removed its free tier, while Render provides a free plan that runs a long-lived Express
-process and injects environment variables.
+The application is deployed on \textbf{Vercel}. Heroku, also listed in the brief, removed its free
+tier; Vercel's free plan serves the static front end from \texttt{public/} and executes the API as
+Node.js \emph{serverless functions}. The handlers in \texttt{api/} are \emph{the same modules} the
+local Express server mounts, so local development and production run one identical code path --
+only the runtime around them differs.
 
 \begin{enumerate}[leftmargin=*]
   \item Push the repository to GitHub: \url{\repourl}.
-  \item In Render: \emph{New $\rightarrow$ Web Service}, connect the repository.
-  \item Build command \texttt{npm install}, start command \texttt{npm start}.
-  \item Under \emph{Environment}, add \texttt{GEMINI\_API\_KEY} with the secret value. This is the
-        \emph{only} place the key is stored outside the developer's machine.
-  \item Deploy. The service is reachable at \url{\appurl}.
+  \item In Vercel: \emph{Add New $\rightarrow$ Project} and import the repository. The framework
+        preset is \emph{Other}; \texttt{vercel.json} declares \texttt{public/} as the static
+        output directory and caps each function at 30\,s.
+  \item Under \emph{Settings $\rightarrow$ Environment Variables}, add \texttt{GEMINI\_API\_KEY}
+        with the secret value. This is the \emph{only} place the key is stored outside the
+        developer's machine.
+  \item Deploy. Every push to \texttt{main} triggers a new deployment, and the site is reachable
+        at \url{\appurl}.
+  \item Locally, \texttt{npm start} runs the identical handlers through Express for development.
 \end{enumerate}
 
-\paragraph{Free-tier caveat.} The Render free plan puts dynos to sleep after inactivity, so the
-first request after idle time takes roughly 20--30 seconds. For a live presentation the
-application is opened (and kept in a background tab) a few minutes before the demo begins.
+\paragraph{Free-tier caveat.} Nothing sleeps between requests: static assets are served from a CDN
+and only the two functions cold-start, which adds well under a second to the first request.
+The configured 30-second function limit is comfortably above the agent's typical end-to-end
+latency (three to four model calls).
 
 % =====================================================================
 \section{Security: API Key Handling}
@@ -507,9 +520,9 @@ Google AI for Developers, \emph{Generating content --- Gemini API},
 \bibitem{express}
 ExpressJS, \emph{Express 5.x Guide}, \url{https://expressjs.com/}, accessed 2026.
 
-\bibitem{render}
-Render, \emph{Documentation --- Web Services},
-\url{https://render.com/docs/web-services}, accessed 2026.
+\bibitem{vercel}
+Vercel, \emph{Documentation --- Node.js Functions},
+\url{https://vercel.com/docs/functions/runtimes/node-js}, accessed 2026.
 
 \bibitem{agentic}
 S. Yao et al., \emph{ReAct: Synergizing Reasoning and Acting in Language Models},
