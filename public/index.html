@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StudyBuddy — AI Study Coach Agent</title>
+    <meta
+      name="description"
+      content="StudyBuddy is an AI agent that turns your notes into quizzes, flashcards and clear explanations."
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>" />
+  </head>
+  <body>
+    <!-- ============================ HEADER ============================ -->
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand-mark">🎓</span>
+        <div>
+          <h1>StudyBuddy</h1>
+          <p class="tagline">AI study coach agent</p>
+        </div>
+      </div>
+      <nav class="top-nav">
+        <span id="statusBadge" class="badge badge--warn">connecting…</span>
+        <a id="repoLink" class="nav-link" href="#" target="_blank" rel="noopener">GitHub</a>
+        <a id="reportLink" class="nav-link" href="#" target="_blank" rel="noopener">Report</a>
+      </nav>
+    </header>
+
+    <main class="layout">
+      <!-- ========================= INPUT PANEL ========================= -->
+      <section class="panel input-panel" aria-label="Ask StudyBuddy">
+        <h2>What are we studying?</h2>
+        <p class="hint">
+          Paste your lecture notes, or just type a topic. The agent decides which tools to use.
+        </p>
+
+        <label class="field-label" for="sourceInput">Study material or topic</label>
+        <textarea
+          id="sourceInput"
+          rows="8"
+          maxlength="8000"
+          placeholder="e.g. Paste your notes on the water cycle… or type 'Photosynthesis'"
+        ></textarea>
+
+        <div class="controls">
+          <div class="control">
+            <label for="intentSelect">Make</label>
+            <select id="intentSelect">
+              <option value="auto">Surprise me</option>
+              <option value="quiz">A quiz</option>
+              <option value="cards">Flashcards</option>
+              <option value="explain">An explanation</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="difficultySelect">Difficulty</label>
+            <select id="difficultySelect">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="countSelect">Items</label>
+            <select id="countSelect">
+              <option value="3">3</option>
+              <option value="5" selected>5</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="askBtn" class="btn btn--primary" type="button">
+          <span class="btn-label">Run agent</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+
+        <div class="examples">
+          <p class="field-label">Try an example</p>
+          <button class="chip" data-example="Quiz me 5 medium questions on the causes of World War 1.">
+            🌍 World War 1
+          </button>
+          <button class="chip" data-example="Make flashcards on JavaScript array methods: map, filter, reduce, forEach and sort.">
+            💻 JS array methods
+          </button>
+          <button class="chip" data-example="Explain recursion in programming.">
+            🧠 Recursion
+          </button>
+          <button class="chip" data-example="Turn this into a quiz: Mitochondria are the powerhouse of the cell, producing ATP through cellular respiration. Ribosomes assemble proteins. The nucleus contains DNA.">
+            🔬 Cell biology
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================= OUTPUT PANEL ======================== -->
+      <section class="panel output-panel" aria-label="Agent output">
+        <!-- Agent plan / tool trace -->
+        <div id="traceBox" class="trace hidden">
+          <div class="trace-head">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            <h3>Agent plan</h3>
+            <span id="traceStep" class="trace-step"></span>
+          </div>
+          <ol id="traceList" class="trace-list"></ol>
+        </div>
+
+        <!-- Agent narration -->
+        <div id="narration" class="narration hidden"></div>
+
+        <!-- Empty state -->
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">✨</div>
+          <h3>Your study kit appears here</h3>
+          <p>
+            Enter notes or a topic on the left and press <strong>Run agent</strong>. You'll watch it
+            plan, call its tools, and build something interactive for you.
+          </p>
+        </div>
+
+        <!-- Tabs for generated artefacts -->
+        <div id="tabs" class="tabs hidden" role="tablist">
+          <button class="tab is-active" data-tab="quiz" role="tab">📝 Quiz</button>
+          <button class="tab" data-tab="cards" role="tab">🃏 Flashcards</button>
+          <button class="tab" data-tab="explain" role="tab">💡 Explanation</button>
+        </div>
+
+        <!-- QUIZ VIEW -->
+        <div id="quizView" class="view hidden">
+          <div class="quiz-meta">
+            <span id="quizTitle" class="pill"></span>
+            <span id="quizProgress" class="pill pill--ghost"></span>
+          </div>
+
+          <div id="quizBody">
+            <div class="question-card">
+              <p id="questionText" class="question-text"></p>
+              <div id="optionsList" class="options"></div>
+              <div id="feedback" class="feedback hidden"></div>
+              <button id="nextBtn" class="btn btn--primary hidden" type="button">Next question →</button>
+            </div>
+          </div>
+
+          <div id="quizResult" class="quiz-result hidden">
+            <div class="score-ring"><span id="scoreValue"></span></div>
+            <h3 id="scoreHeadline"></h3>
+            <p id="scoreDetail" class="hint"></p>
+            <div class="btn-row">
+              <button id="retryBtn" class="btn btn--ghost" type="button">Retry quiz</button>
+              <button id="newBtn" class="btn btn--primary" type="button">New task</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FLASHCARDS VIEW -->
+        <div id="cardsView" class="view hidden">
+          <div class="quiz-meta">
+            <span id="cardsTitle" class="pill"></span>
+            <button id="shuffleBtn" class="btn btn--tiny" type="button">🔀 Shuffle</button>
+          </div>
+          <div id="cardsGrid" class="cards-grid"></div>
+          <p class="hint center">Click a card to flip it.</p>
+        </div>
+
+        <!-- EXPLANATION VIEW -->
+        <div id="explainView" class="view hidden">
+          <div id="explainBody" class="prose"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ========================== HISTORY ============================= -->
+    <section class="panel history-panel" aria-label="Recent scores">
+      <div class="history-head">
+        <h3>📊 Recent quiz scores</h3>
+        <button id="clearHistory" class="btn btn--tiny" type="button">Clear</button>
+      </div>
+      <ul id="historyList" class="history-list">
+        <li class="history-empty">No quizzes finished yet — your results will be saved in this browser.</li>
+      </ul>
+    </section>
+
+    <footer class="site-footer">
+      <p>
+        StudyBuddy — Web Client-Side Programming project. Built with Node.js, Express &amp; Google
+        Gemini.
+      </p>
+      <p id="footerLinks" class="footer-links"></p>
+    </footer>
+
+    <!-- Toast for errors / messages -->
+    <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

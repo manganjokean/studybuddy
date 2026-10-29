@@ -1,0 +1,27 @@
+{
+  "name": "studybuddy-ai-agent",
+  "version": "1.0.0",
+  "description": "StudyBuddy - an AI study coach agent built with Node.js, Express and the Google Gemini API.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "keycheck": "node scripts/keycheck.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ai-agent",
+    "gemini",
+    "express",
+    "chatbot",
+    "study-assistant"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0"
+  }
+}
